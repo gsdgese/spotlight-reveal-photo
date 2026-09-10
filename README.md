@@ -8,6 +8,14 @@
 
 ## 效果预览
 
+
+
+https://github.com/user-attachments/assets/cd68d32c-46cc-4103-8c54-f06ecc63b055
+
+
+
+
+
 ```
   ┌──────────────── 浏览器全屏 ────────────────┐
   │                                              │
