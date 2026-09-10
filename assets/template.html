@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{TITLE}}</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html, body {
+    background: {{BG_COLOR}};
+    overflow-x: hidden;
+  }
+
+  .hero {
+    position: relative;
+    width: 100%;
+    height: 100vh;
+    height: 100dvh;
+    overflow: hidden;
+    background: {{BG_COLOR}};
+  }
+
+  /* 两层图片：底层空场景 + 顶层原图，contain 居中完整竖屏显示，禁止平铺 */
+  .hero-base-img,
+  .hero-reveal-img {
+    position: absolute;
+    inset: 0;
+    background-size: contain;
+    background-position: center center;
+    background-repeat: no-repeat;
+  }
+
+  .hero-base-img { z-index: 1; }
+
+  .hero-reveal-img {
+    z-index: 2;
+    pointer-events: none;
+    /* 初始隐藏在屏幕外，等鼠标/手指移入再显示光圈 */
+    -webkit-mask-image: radial-gradient(circle 0px at -999px -999px, #fff, transparent);
+            mask-image: radial-gradient(circle 0px at -999px -999px, #fff, transparent);
+  }
+
+  .hero-image-animate {
+    opacity: 0;
+    animation: heroImageIn 1.2s cubic-bezier(0.25,0.46,0.45,0.94) forwards;
+    animation-delay: 0.15s;
+  }
+  @keyframes heroImageIn {
+    from { opacity: 0; transform: scale(1.12); }
+    to   { opacity: 1; transform: scale(1); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .hero-image-animate { animation: none; opacity: 1; transform: none; }
+  }
+</style>
+</head>
+<body>
+
+<main class="hero">
+  <!-- 底层：去掉主体后的空场景 -->
+  <div class="hero-base-img hero-image-animate"
+       style="background-image:url('{{BASE_IMG_URL}}')"></div>
+
+  <!-- 顶层：带主体的原图，被聚光灯蒙版揭示 -->
+  <div class="hero-reveal-img" id="reveal-img"
+       style="background-image:url('{{REVEAL_IMG_URL}}')"></div>
+</main>
+
+<script>
+(function () {
+  'use strict';
+  var reveal = document.getElementById('reveal-img');
+
+  // ===== 按图片实际情况填写（原图像素坐标空间）=====
+  var IMG_W = {{IMG_W}}, IMG_H = {{IMG_H}};          // 原图宽、高（像素）
+  var PERSON = {
+    x: {{PERSON_X}},          // 主体中心在原图中的 x（像素）
+    y: {{PERSON_Y}},          // 主体中心在原图中的 y（像素）
+    extent: {{PERSON_EXTENT}} // 要把整个人照出来需要的半径（原图像素）
+  };
+  var HOVER_RANGE = 360;      // 指针距主体中心多少屏幕像素内，光圈自动放大
+  // ============================================================
+
+  var curR = null;
+
+  function spotlight(clientX, clientY) {
+    if (!reveal) return;
+    var rect = reveal.getBoundingClientRect();
+    var x = clientX - rect.left;
+    var y = clientY - rect.top;
+
+    var baseR = window.innerWidth < 480 ? 120
+              : window.innerWidth < 720 ? 160 : 260;
+
+    // contain 居中：原图坐标 -> 当前屏幕坐标
+    var s = Math.min(rect.width / IMG_W, rect.height / IMG_H);
+    var offX = (rect.width - IMG_W * s) / 2;
+    var offY = (rect.height - IMG_H * s) / 2;
+    var px = PERSON.x * s + offX;
+    var py = PERSON.y * s + offY;
+
+    var dx = x - px, dy = y - py;
+    var dist = Math.sqrt(dx * dx + dy * dy);
+
+    // 靠近主体中心 -> 光圈平滑放大到能容纳整个人；否则普通小光圈
+    var targetR = dist < HOVER_RANGE ? PERSON.extent * s : baseR;
+    if (curR === null) curR = baseR;
+    curR += (targetR - curR) * 0.2;
+    var R = Math.round(curR);
+
+    var mask =
+      'radial-gradient(circle ' + R + 'px at ' + x + 'px ' + y + 'px, ' +
+      '#fff 0%, #fff 40%, rgba(255,255,255,0.75) 60%, rgba(255,255,255,0.4) 75%, ' +
+      'rgba(255,255,255,0.12) 88%, transparent 100%)';
+    reveal.style.webkitMaskImage = mask;
+    reveal.style.maskImage = mask;
+  }
+
+  window.addEventListener('mousemove', function (e) {
+    spotlight(e.clientX, e.clientY);
+  });
+  window.addEventListener('touchmove', function (e) {
+    if (e.touches && e.touches[0]) {
+      spotlight(e.touches[0].clientX, e.touches[0].clientY);
+    }
+  }, { passive: true });
+})();
+</script>
+
+</body>
+</html>
